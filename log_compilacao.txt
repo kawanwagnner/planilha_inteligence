@@ -1,0 +1,8 @@
+Execução em 2025-10-21 18:44:35.518097
+Total de registros: 286
+--------------------------------------------------
+✅ OK: AMANDAA_PINHEIRO - ATENDIMENTOS - 16-10-25.xlsm (29 linhas úteis de 1021 total)
+✅ OK: RAPHAELAA_MARQUES - ATENDIMENTOS_20-10-25.xlsm (114 linhas úteis de 1047 total)
+✅ OK: RODRIGO_MARQUES - ATENDIMENTOS_20-10-25.xlsm (114 linhas úteis de 1047 total)
+❌ Nome inválido: TESTE_TESTE - ATENDIMENTOS - 16-10-25 - Copia.xlsm (padrão: NOME_SOBRENOME - ATENDIMENTOS - DD-MM-AA.xlsx)
+✅ OK: TESTE_TESTE - ATENDIMENTOS - 16-10-25.xlsm (29 linhas úteis de 1021 total)
