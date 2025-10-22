@@ -9,35 +9,16 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 # Sistema de busca inteligente de diretório
 def encontrar_base_dir():
     """
-    Procura o diretório base em várias localizações possíveis:
-    1. Caminho padrão da rede/OneDrive (se existir)
-    2. Pasta onde o executável está rodando
-    3. Pasta do script Python (durante desenvolvimento)
+    Procura o diretório base onde o programa está rodando.
+    Funciona em qualquer pasta, qualquer PC.
     """
-    # Opção 1: Caminho padrão da rede (tenta primeiro)
-    caminho_padrao = r"C:/Users/CarolinedeAssisOlive/OneDrive - Plata S.A. Securitizadora/UY3 - Rede - MIDDLE/Consolidado/PLANILHA DE ATENDIMENTOS/Atendimentos_CompiladoGeral "
-    if os.path.exists(caminho_padrao):
-        print(f"✅ Usando caminho da rede: {caminho_padrao}")
-        return caminho_padrao
-    
-    # Opção 2: Procura na pasta do usuário atual (OneDrive de outro usuário)
-    try:
-        username = os.environ.get('USERNAME', '')
-        caminho_usuario = f"C:/Users/{username}/OneDrive - Plata S.A. Securitizadora/UY3 - Rede - MIDDLE/Consolidado/PLANILHA DE ATENDIMENTOS/Atendimentos_CompiladoGeral "
-        if os.path.exists(caminho_usuario):
-            print(f"✅ Usando caminho do usuário {username}: {caminho_usuario}")
-            return caminho_usuario
-    except:
-        pass
-    
-    # Opção 3: Pasta onde o executável está rodando (modo portátil)
+    # Modo executável (PyInstaller) - usa pasta onde o .exe está
     if getattr(sys, 'frozen', False):
-        # Executável PyInstaller
         exe_dir = os.path.dirname(sys.executable)
         print(f"✅ Usando pasta do executável: {exe_dir}")
         return exe_dir
     else:
-        # Script Python (desenvolvimento)
+        # Script Python (desenvolvimento) - usa pasta do script
         script_dir = os.path.dirname(os.path.abspath(__file__))
         # Sobe um nível se estiver em /scripts
         if os.path.basename(script_dir) == 'scripts':
@@ -56,38 +37,126 @@ COLS_ESPERADAS = [
 ]
 
 def fechar_excel():
-    """Fecha todas as instâncias do Excel automaticamente"""
+    """Verifica se o Excel está aberto e pergunta se quer fechar"""
     try:
         print("🔄 Verificando se o Excel está aberto...")
         result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq EXCEL.EXE'], 
                               capture_output=True, text=True, shell=True)
         
         if 'EXCEL.EXE' in result.stdout:
-            print("📊 Excel detectado! Fechando automaticamente...")
-            subprocess.run(['taskkill', '/F', '/IM', 'EXCEL.EXE'], 
-                         capture_output=True, shell=True)
-            time.sleep(2)  # Aguarda o Excel fechar completamente
-            print("✅ Excel fechado com sucesso!")
-            return True
+            print("\n⚠️  ATENÇÃO: Excel está aberto!")
+            print("⚠️  Para evitar erros, é recomendado fechar o Excel antes de continuar.")
+            print("⚠️  Todas as planilhas abertas serão fechadas (SALVE SEU TRABALHO!).")
+            print("\n💡 OPÇÕES:")
+            print("   1. Fechar Excel automaticamente")
+            print("   2. Criar arquivo temporário (abre em nova janela do Excel)")
+            print("   3. Cancelar operação")
+            
+            resposta = input("\n🤔 Escolha uma opção (1/2/3): ").strip()
+            
+            if resposta == '1':
+                print("📊 Fechando Excel...")
+                subprocess.run(['taskkill', '/F', '/IM', 'EXCEL.EXE'], 
+                             capture_output=True, shell=True)
+                time.sleep(2)  # Aguarda o Excel fechar completamente
+                print("✅ Excel fechado com sucesso!")
+                return 'fechado'
+            elif resposta == '2':
+                print("📋 Modo arquivo temporário selecionado!")
+                return 'navegador'
+            else:
+                print("❌ Operação cancelada pelo usuário.")
+                return 'cancelado'
         else:
-            print("✅ Excel não estava aberto.")
-            return False
+            print("✅ Excel não está aberto.")
+            return 'livre'
     except Exception as e:
-        print(f"⚠️ Erro ao tentar fechar Excel: {e}")
-        return False
+        print(f"⚠️ Erro ao verificar Excel: {e}")
+        return 'livre'
 
 def abrir_planilha_final():
     """Abre a planilha final automaticamente após o processamento"""
     try:
-        if os.path.exists(MAE_PATH):
-            print(f"📊 Abrindo planilha final: {os.path.basename(MAE_PATH)}")
-            subprocess.Popen([MAE_PATH], shell=True)
-            return True
-        else:
+        if not os.path.exists(MAE_PATH):
             print("⚠️ Arquivo final não encontrado para abrir.")
             return False
+        
+        # Pergunta ao usuário se quer abrir
+        print("\n" + "="*60)
+        print("📊 Planilha consolidada com sucesso!")
+        print(f"📁 Local: {MAE_PATH}")
+        print("="*60)
+        
+        resposta = input("\n🤔 Deseja abrir a planilha agora? (S/N): ").strip().upper()
+        
+        if resposta in ['S', 'SIM', 'Y', 'YES']:
+            print(f"📊 Abrindo planilha: {os.path.basename(MAE_PATH)}")
+            # Usa os.startfile() que é mais confiável no Windows
+            os.startfile(MAE_PATH)
+            print("✅ Planilha aberta!")
+            return True
+        else:
+            print("⏭️ Planilha não foi aberta. Você pode abri-la manualmente depois.")
+            return False
+            
     except Exception as e:
         print(f"⚠️ Erro ao abrir planilha final: {e}")
+        print(f"💡 Abra manualmente em: {MAE_PATH}")
+        return False
+
+def abrir_no_navegador(df: pd.DataFrame):
+    """Salva como arquivo temporário para visualização paralela"""
+    try:
+        # Limpa arquivos temporários antigos primeiro
+        print(f"\n🧹 Limpando arquivos temporários antigos...")
+        temp_files = glob.glob(os.path.join(BASE_DIR, "PLANILHA_TEMP_*.xlsx"))
+        if temp_files:
+            for temp_file in temp_files:
+                try:
+                    os.remove(temp_file)
+                    print(f"   🗑️ Removido: {os.path.basename(temp_file)}")
+                except Exception as e:
+                    print(f"   ⚠️ Não foi possível remover {os.path.basename(temp_file)}: {e}")
+            print(f"✅ Limpeza concluída!")
+        else:
+            print(f"✅ Nenhum arquivo temporário antigo encontrado.")
+        
+        # Cria arquivo temporário com timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        temp_path = os.path.join(BASE_DIR, f"PLANILHA_TEMP_{timestamp}.xlsx")
+        
+        print(f"\n📊 Salvando arquivo temporário: {os.path.basename(temp_path)}")
+        
+        # Usa a mesma função de salvar_no_excel, mas com caminho temporário
+        # Temporariamente substitui MAE_PATH
+        global MAE_PATH
+        mae_path_original = MAE_PATH
+        MAE_PATH = temp_path
+        
+        try:
+            salvar_no_excel(df)
+            print(f"✅ Arquivo temporário salvo com TODAS as abas!")
+            print(f"📁 Local: {temp_path}")
+            print(f"\n💡 IMPORTANTE: Este é um arquivo temporário para visualização.")
+            print(f"💡 Ele será automaticamente removido na próxima execução.")
+            print(f"💡 Feche o Excel principal e execute novamente para atualizar o arquivo definitivo.")
+        finally:
+            # Restaura o caminho original
+            MAE_PATH = mae_path_original
+        
+        # Pergunta se quer abrir o temporário
+        resposta = input("\n🤔 Deseja abrir o arquivo temporário agora? (S/N): ").strip().upper()
+        
+        if resposta in ['S', 'SIM', 'Y', 'YES']:
+            os.startfile(temp_path)
+            print("✅ Arquivo temporário aberto em nova janela do Excel!")
+        else:
+            print("⏭️ Arquivo temporário salvo, mas não foi aberto.")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erro ao criar arquivo temporário: {e}")
         return False
 
 def escrever_status(mensagem: str):
@@ -458,8 +527,15 @@ def main():
     try:
         print("🚀 Iniciando atualização das planilhas...")
         
-        # Fecha Excel automaticamente se estiver aberto
-        excel_estava_aberto = fechar_excel()
+        # Verifica se o Excel está aberto e pede ação
+        status_excel = fechar_excel()
+        
+        # Se usuário cancelou, encerra
+        if status_excel == 'cancelado':
+            print("\n❌ Operação cancelada.")
+            if getattr(sys, 'frozen', False):
+                input("Pressione ENTER para fechar...")
+            return
         
         # Verifica se os diretórios existem
         if not os.path.exists(BASE_DIR):
@@ -480,28 +556,42 @@ def main():
         if df.empty:
             print("⚠️ Nenhum dado encontrado para consolidar!")
         
-        salvar_no_excel(df)
-        escrever_status(f"✅ Atualizado com sucesso — {len(df)} linhas consolidadas.")
-        
-        # Salvar log em arquivo
-        log_path = os.path.join(BASE_DIR, "log_compilacao.txt")
-        with open(log_path, "w", encoding="utf-8") as f:
-            f.write(f"Execução em {datetime.now()}\n")
-            f.write(f"Total de registros: {len(df)}\n")
-            f.write("-" * 50 + "\n")
-            f.write("\n".join(logs))
-        
-        print(f"✅ Processo concluído! Arquivo salvo em: {MAE_PATH}")
-        print(f"📝 Log salvo em: {log_path}")
-        
-        # Abre a planilha final automaticamente
-        abrir_planilha_final()
+        # Se escolheu modo navegador, salva temporário e pula salvamento normal
+        if status_excel == 'navegador':
+            abrir_no_navegador(df)
+            
+            # Salvar log em arquivo
+            log_path = os.path.join(BASE_DIR, "log_compilacao.txt")
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(f"Execução em {datetime.now()} (MODO TEMPORÁRIO - Excel aberto)\n")
+                f.write(f"Total de registros: {len(df)}\n")
+                f.write("-" * 50 + "\n")
+                f.write("\n".join(logs))
+            
+            print(f"\n📝 Log salvo em: {log_path}")
+        else:
+            # Modo normal - salva no arquivo principal
+            salvar_no_excel(df)
+            escrever_status(f"✅ Atualizado com sucesso — {len(df)} linhas consolidadas.")
+            
+            # Salvar log em arquivo
+            log_path = os.path.join(BASE_DIR, "log_compilacao.txt")
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(f"Execução em {datetime.now()}\n")
+                f.write(f"Total de registros: {len(df)}\n")
+                f.write("-" * 50 + "\n")
+                f.write("\n".join(logs))
+            
+            print(f"✅ Processo concluído! Arquivo salvo em: {MAE_PATH}")
+            print(f"📝 Log salvo em: {log_path}")
+            
+            # Abre a planilha final (com opção de escolha)
+            abrir_planilha_final()
         
         # Pausa para ver o resultado (apenas quando executado como exe)
         if getattr(sys, 'frozen', False):
-            print("\n🎉 Planilha consolidada e aberta automaticamente!")
-            print("Fechando em 2 segundos...")
-            time.sleep(2)
+            print("\n✅ Processamento finalizado!")
+            input("Pressione ENTER para fechar...")
             
     except Exception as e:
         error_msg = f"❌ Erro na atualização: {e}"
@@ -525,8 +615,8 @@ def main():
         
         # Pausa para ver o erro (apenas quando executado como exe)
         if getattr(sys, 'frozen', False):
-            print("Fechando em 2 segundos...")
-            time.sleep(2)
+            print("\n❌ Erro durante o processamento!")
+            input("Pressione ENTER para fechar...")
         
         raise
 

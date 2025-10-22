@@ -1,5 +1,0 @@
-Execução em 2025-10-22 09:51:17.692468
-Total de registros: 143
---------------------------------------------------
-✅ OK: AMANDA_PINHEIRO - ATENDIMENTOS - 16-10-25.xlsm (29 linhas úteis de 1021 total)
-✅ OK: RAPHAELA_MARQUES - ATENDIMENTOS_20-10-25.xlsm (114 linhas úteis de 1047 total)
