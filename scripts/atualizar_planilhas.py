@@ -202,13 +202,34 @@ def ler_filhos():
     return (pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame(columns=COLS_ESPERADAS+["PRIMEIRO_NOME","DATA_ARQUIVO","ARQUIVO"])), logs
 
 def salvar_no_excel(df: pd.DataFrame):
-    # Remove arquivo anterior se existir (já que fechamos o Excel automaticamente)
+    # Cria pasta de backup se não existir
+    backup_dir = os.path.join(BASE_DIR, "backup")
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+        print(f"📁 Pasta de backup criada: {backup_dir}")
+    
+    # Faz backup da planilha mãe antes de apagar (se existir)
     if os.path.exists(MAE_PATH):
         try:
+            backup_path = os.path.join(backup_dir, "PLANILHA_MAE_BACKUP.xlsx")
+            
+            # Se já existe um backup, remove ele (mantém sempre só o último)
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+                print(f"🔄 Backup anterior removido")
+            
+            # Cria novo backup
+            import shutil
+            shutil.copy2(MAE_PATH, backup_path)
+            print(f"💾 Backup criado: PLANILHA_MAE_BACKUP.xlsx")
+            
+            # Só remove o arquivo original após backup bem-sucedido
             os.remove(MAE_PATH)
             print(f"🗑️ Arquivo anterior removido: {os.path.basename(MAE_PATH)}")
+            
         except Exception as e:
-            print(f"⚠️ Não foi possível remover arquivo anterior: {e}")
+            print(f"⚠️ Erro ao fazer backup: {e}")
+            print(f"⚠️ Continuando sem remover arquivo anterior...")
     
     # Cria ou abre a Mãe
     if os.path.exists(MAE_PATH):
