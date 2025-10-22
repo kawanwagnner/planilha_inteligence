@@ -6,9 +6,48 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 # ===== CONFIG =====
-BASE_DIR   = r"C:/Users/KawanWagnnerGonçalve/Atendimentos"
-FILHAS_DIR = os.path.join(BASE_DIR, "filhas")  # Corrigido para minúsculo
-MAE_PATH   = os.path.join(BASE_DIR, "PLANILHA_MAE.xlsx")  # Arquivo será .xlsx
+# Sistema de busca inteligente de diretório
+def encontrar_base_dir():
+    """
+    Procura o diretório base em várias localizações possíveis:
+    1. Caminho padrão da rede/OneDrive (se existir)
+    2. Pasta onde o executável está rodando
+    3. Pasta do script Python (durante desenvolvimento)
+    """
+    # Opção 1: Caminho padrão da rede (tenta primeiro)
+    caminho_padrao = r"C:/Users/CarolinedeAssisOlive/OneDrive - Plata S.A. Securitizadora/UY3 - Rede - MIDDLE/Consolidado/PLANILHA DE ATENDIMENTOS/Atendimentos_CompiladoGeral "
+    if os.path.exists(caminho_padrao):
+        print(f"✅ Usando caminho da rede: {caminho_padrao}")
+        return caminho_padrao
+    
+    # Opção 2: Procura na pasta do usuário atual (OneDrive de outro usuário)
+    try:
+        username = os.environ.get('USERNAME', '')
+        caminho_usuario = f"C:/Users/{username}/OneDrive - Plata S.A. Securitizadora/UY3 - Rede - MIDDLE/Consolidado/PLANILHA DE ATENDIMENTOS "
+        if os.path.exists(caminho_usuario):
+            print(f"✅ Usando caminho do usuário {username}: {caminho_usuario}")
+            return caminho_usuario
+    except:
+        pass
+    
+    # Opção 3: Pasta onde o executável está rodando (modo portátil)
+    if getattr(sys, 'frozen', False):
+        # Executável PyInstaller
+        exe_dir = os.path.dirname(sys.executable)
+        print(f"✅ Usando pasta do executável: {exe_dir}")
+        return exe_dir
+    else:
+        # Script Python (desenvolvimento)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Sobe um nível se estiver em /scripts
+        if os.path.basename(script_dir) == 'scripts':
+            script_dir = os.path.dirname(script_dir)
+        print(f"✅ Usando pasta do script: {script_dir}")
+        return script_dir
+
+BASE_DIR   = encontrar_base_dir()
+FILHAS_DIR = os.path.join(BASE_DIR, "filhas")
+MAE_PATH   = os.path.join(BASE_DIR, "PLANILHA_MAE.xlsx")
 
 NOME_REGEX = re.compile(r"^([A-ZÇÃÕÉÊÁÍÓÚ]+)_[A-ZÇÃÕÉÊÁÍÓÚ]+ - ATENDIMENTOS.{0,3}(\d{2}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4})\.xlsm?$", re.I)
 COLS_ESPERADAS = [
