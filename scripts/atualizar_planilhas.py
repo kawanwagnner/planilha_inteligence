@@ -23,7 +23,7 @@ def encontrar_base_dir():
     # Opção 2: Procura na pasta do usuário atual (OneDrive de outro usuário)
     try:
         username = os.environ.get('USERNAME', '')
-        caminho_usuario = f"C:/Users/{username}/OneDrive - Plata S.A. Securitizadora/UY3 - Rede - MIDDLE/Consolidado/PLANILHA DE ATENDIMENTOS "
+        caminho_usuario = f"C:/Users/{username}/OneDrive - Plata S.A. Securitizadora/UY3 - Rede - MIDDLE/Consolidado/PLANILHA DE ATENDIMENTOS/Atendimentos_CompiladoGeral "
         if os.path.exists(caminho_usuario):
             print(f"✅ Usando caminho do usuário {username}: {caminho_usuario}")
             return caminho_usuario
